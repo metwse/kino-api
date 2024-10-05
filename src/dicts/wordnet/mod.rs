@@ -8,11 +8,19 @@ mod word;
 
 use word::{Word, Gloassary};
 
-use super::database::Database;
+use super::{
+    database::Database,
+    collections::{
+        word_trie::WordTrie,
+        bktree::BKTree,
+    },
+};
 
 /// In-memory WordNet database file.
 pub struct WordNetDatabase {
     database: Vec<String>,
+    word_trie: WordTrie,
+    bktree: BKTree,
     index: Vec<BTreeMap<String, Vec<usize>>>,
 }
 
@@ -22,6 +30,8 @@ impl WordNetDatabase {
     /// Loads WordNet database.
     pub fn new(location: PathBuf) -> Self {
         let mut database = Vec::with_capacity(4);
+        let mut word_trie = WordTrie::new();
+        let mut bktree = BKTree::new();
         let mut index = Vec::with_capacity(4);
 
         for file in Self::WORD_TYPES {
@@ -49,6 +59,9 @@ impl WordNetDatabase {
                             )
                         }
 
+                        if word_trie.insert(lemma.clone()) {
+                            bktree.insert(lemma.clone());
+                        }
                         btree.insert(lemma, synset_offsets);
                     }
 
@@ -61,7 +74,10 @@ impl WordNetDatabase {
         }
 
         Self {
-            database, index, 
+            database,
+            word_trie,
+            bktree,
+            index, 
         }
     }
 
@@ -94,11 +110,14 @@ impl WordNetDatabase {
             glossary_end += 1 
         }
         
+        // these from_utf8 functions should not fail. unsafe from_utf8_unchecked might be used
+        let lemma = std::str::from_utf8(&bytes[lemma_start..(lemma_end)]).ok()?;
+        let glossary = std::str::from_utf8(&bytes[glossary_start..=meanings_end]).ok()?.trim();
+        let examples = std::str::from_utf8(&bytes[(meanings_end + 1)..=glossary_end]).ok()?.trim();
         Some(Gloassary::new(
-            // these from_utf8 functions should not fail. unsafe from_utf8_unchecked might be used
-            std::str::from_utf8(&bytes[lemma_start..(lemma_end)]).ok()?,
-            std::str::from_utf8(&bytes[glossary_start..=meanings_end]).ok()?.trim(),
-            std::str::from_utf8(&bytes[(meanings_end + 1)..=glossary_end]).ok()?.trim(),
+            lemma,
+            glossary,
+            examples
         ))
     }
 }
@@ -127,12 +146,11 @@ impl<'a> Database<'a, Word<'a>> for WordNetDatabase {
         } else { None }
     }
 
-    fn suggest(&'a self, _query: String) -> Vec<&'a String> {
-        todo!()
+    fn suggest(&'a self, query: String) -> Vec<&'a String> {
+        self.bktree.find(query, 10)
     }
 
-    fn suggest_search(&'a self, _query: String) -> Vec<&'a String> {
-        todo!()
+    fn suggest_search(&'a self, query: String) -> Vec<&'a String> {
+        self.word_trie.prefix_search(query, 10)
     }
 }
-

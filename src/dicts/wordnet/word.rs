@@ -7,16 +7,22 @@ use serde::{
     }
 };
 
+// Serializable word object which can contain four word types.
 pub struct Word<'a> {
     pub lemma: String,
     pub data: [Vec<Gloassary<'a>>; 4],
 }
 
+// Single-type word glossary.
 pub struct Gloassary<'a> {
     synonyms: Synonyms<'a>, 
     meanings: &'a str,
     examples: Examples<'a>,
 }
+
+// Newtype structs for serializing.
+struct Synonyms<'a>(&'a str);
+struct Examples<'a>(&'a str);
 
 impl<'a> Gloassary<'a> {
     pub fn new(synonyms: &'a str, meanings: &'a str, examles: &'a str) -> Self {
@@ -64,7 +70,6 @@ impl Serialize for Gloassary<'_> {
     }
 }
 
-struct Synonyms<'a>(&'a str);
 impl Serialize for Synonyms<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -96,7 +101,6 @@ impl Serialize for Synonyms<'_> {
     }
 }
 
-struct Examples<'a>(&'a str);
 impl Serialize for Examples<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
