@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+/// Trie struct for optimized prefix search queries.
 #[derive(Debug)]
 pub struct WordTrie {
     next: BTreeMap<u8, WordTrie>,
@@ -31,9 +32,10 @@ impl WordTrie {
         true
     }
 
-    pub fn prefix_search<'a>(&'a self, query: String, limit: usize) -> Vec<&'a String> {
+    /// [`BTreeMap`] prefix search.
+    pub fn prefix_search<'a>(&'a self, word: &String, limit: usize) -> Vec<&'a String> {
         let mut current = self;
-        for &byte in query.as_bytes() {
+        for &byte in word.as_bytes() {
             if let Some(current2) = current.next.get(&byte) {
                 current = current2
             } else {
@@ -58,4 +60,21 @@ impl WordTrie {
 
         results
     }
+
+    /// Returns true if [`WordTrie`] has word.
+    pub fn has(&self, word: &String) -> bool {
+        let mut current = self;
+        for &byte in word.as_bytes() {
+            if let Some(current2) = current.next.get(&byte) {
+                current = current2;
+                if let Some(_) = &current.word {
+                    return false
+                }
+            } else {
+                break
+            }
+        }
+        false
+    }
+
 }

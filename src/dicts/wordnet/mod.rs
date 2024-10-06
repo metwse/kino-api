@@ -8,11 +8,12 @@ mod word;
 
 use word::{Word, Gloassary};
 
+
 use super::{
     database::Database,
     collections::{
-        word_trie::WordTrie,
-        bktree::BKTree,
+        WordTrie,
+        BKTree,
     },
 };
 
@@ -147,10 +148,10 @@ impl<'a> Database<'a, Word<'a>> for WordNetDatabase {
     }
 
     fn suggest(&'a self, query: String) -> Vec<&'a String> {
-        self.bktree.find(query, 10)
+        self.bktree.find(&query, 10)
     }
 
     fn suggest_search(&'a self, query: String) -> Vec<&'a String> {
-        self.word_trie.prefix_search(query, 10)
+        self.word_trie.prefix_search(&query, 10)
     }
 }

@@ -23,9 +23,12 @@ fn main() {
     println!("{:?}", database.suggest_search(String::from("adject")));
 
     let start = std::time::Instant::now();
-    database.suggest(String::from("synomyt"));
-    println!("suggest synomyt: {:?}us", start.elapsed().as_micros());
-    println!("{:?}", database.suggest(String::from("synomyt")));
+    let mut suggestion = None;
+    for _ in 0..20 {
+        suggestion = std::hint::black_box(Some(database.suggest(String::from("outdate"))));
+    }
+    println!("suggest: {:?}us", start.elapsed().as_micros() / 20);
+    println!("{:?}", suggestion);
 
     std::thread::sleep(std::time::Duration::from_secs(100))
 }
