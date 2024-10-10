@@ -1,3 +1,4 @@
+use core::str;
 use std::{
     collections::BTreeMap, 
     fs,
@@ -21,6 +22,7 @@ use super::{
 pub struct WordNetDatabase {
     database: Vec<String>,
     word_trie: WordTrie,
+    /// BKTree is not initialized to improve performance if debug mode enabled.
     bktree: BKTree,
     index: Vec<BTreeMap<String, Vec<usize>>>,
 }
@@ -34,11 +36,12 @@ impl WordNetDatabase {
         let mut word_trie = WordTrie::new();
         let mut bktree = BKTree::new();
         let mut index = Vec::with_capacity(4);
+        tracing::info!("BKTree disabled in debug mode");
 
         for file in Self::WORD_TYPES {
             for file_type in ["data", "index"] {
                 let mut location = location.clone();
-                location.push(format!("dict/{file_type}.{file}"));
+                location.push(format!("{file_type}.{file}"));
                 let data = fs::read_to_string(location)
                     .expect("Cannot open database");
 
@@ -60,7 +63,8 @@ impl WordNetDatabase {
                             )
                         }
 
-                        if word_trie.insert(lemma.clone()) {
+                        // disables bktree in debug mode because of lack of performance
+                        if !cfg!(debug_assertions) && word_trie.insert(lemma.clone()) {
                             bktree.insert(lemma.clone());
                         }
                         btree.insert(lemma, synset_offsets);
@@ -109,8 +113,11 @@ impl WordNetDatabase {
                 meanings_end = glossary_end - 1;
             }
             glossary_end += 1 
+        } 
+        if meanings_end == glossary_start {
+            meanings_end = glossary_end - 1; 
         }
-        
+
         // these from_utf8 functions should not fail. unsafe from_utf8_unchecked might be used
         let lemma = std::str::from_utf8(&bytes[lemma_start..(lemma_end)]).ok()?;
         let glossary = std::str::from_utf8(&bytes[glossary_start..=meanings_end]).ok()?.trim();

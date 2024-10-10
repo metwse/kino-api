@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 /// Google ID Token
 #[derive(Deserialize, Debug)]
-pub struct IdToken {
+pub struct GoogleIdToken {
     // These six fields are incuded in all Google ID tokens.
     /// issuer: Should equal to `accounts.google.com` or `https://accounts.google.com`.
     pub iss: String,

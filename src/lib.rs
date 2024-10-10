@@ -3,3 +3,6 @@ pub mod dicts;
 
 /// Provides a `Client` to verify Google's OAuth client id tokens.
 pub mod google_signin;
+
+/// Kino web api.
+pub mod server;

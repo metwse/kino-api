@@ -9,18 +9,18 @@ use jsonwebtoken::{
     DecodingKey, Validation
 };
 
-use super::IdToken;
+use super::GoogleIdToken;
 
 /// Google ID Token validator. 
-pub struct Client<'a> {
-    audiences: &'a [&'a str],
-    allowed_hosted_domains: &'a [&'a str],
+pub struct GoogleClient {
+    audiences: Vec<String>,
+    allowed_hosted_domains: Vec<String>,
     validate_hosted_domains: bool,
     decoding_keys: Arc<Mutex<Option<Vec<(DecodingKey, String)>>>>
 }
 
-impl<'a> Client<'a> {
-    pub fn new(audiences: &'a [&'a str], allowed_hosted_domains: &'a [&'a str]) -> Self {
+impl GoogleClient {
+    pub fn new(audiences: Vec<String>, allowed_hosted_domains: Vec<String>) -> Self {
         Self {
             audiences,
             allowed_hosted_domains,
@@ -67,7 +67,12 @@ impl<'a> Client<'a> {
                         );
 
                         // notify main thread when first certs received
-                        if let Some(tx) = tx.take() { tx.send(1).unwrap() }                     
+                        if let Some(tx) = tx.take() { 
+                            tracing::info!("first JWK certs received");
+                            tx.send(1).unwrap();
+                        } else {
+                            tracing::info!("JWK certs reloaded");
+                        }
 
                         tokio::time::sleep(max_age.unwrap_or(Duration::from_secs(10))).await;
                     }
@@ -84,11 +89,12 @@ impl<'a> Client<'a> {
     }
 
     /// Validates Google's JWT
-    pub fn validate(&self, token: &str) -> Result<IdToken, super::Error> {
+    pub fn validate(&self, token: &str) -> Result<GoogleIdToken, super::Error> {
         let Ok(header) = decode_header(token) else {
-            return Err(super::Error::InvalidToken)
+            return Err(super::Error::InvalidHeader)
         };
 
+        // token must include key_id
         let Some(token_key_id) = header.kid else {
             return Err(super::Error::MissingKeyId)
         };
@@ -108,17 +114,17 @@ impl<'a> Client<'a> {
 
         let validation = {
             let mut validation = Validation::new(header.alg);
-            validation.set_audience(self.audiences);
+            validation.set_audience(&self.audiences);
             validation.set_issuer(&["accounts.google.com", "https://accounts.google.com"]);
             validation
         };
 
-        let decoded_token = match decode::<IdToken>(token, &decoding_key, &validation) {
+        let decoded_token = match decode::<GoogleIdToken>(token, &decoding_key, &validation) {
             Ok(decoded_token) => {
                 let decoded_token = decoded_token.claims;
                 if let Some(ref hosted_domain) = decoded_token.hd {
                     if self.validate_hosted_domains &&
-                        !self.allowed_hosted_domains.contains(&&hosted_domain[..]) { 
+                        !self.allowed_hosted_domains.contains(hosted_domain) { 
                         return Err(super::Error::InvalidHostedDomain)
                     }
                 }

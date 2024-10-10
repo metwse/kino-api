@@ -3,6 +3,7 @@ use std::fmt;
 /// Validation error.
 #[derive(Debug)]
 pub enum Error {
+    InvalidHeader,
     InvalidToken,
     KeyIdNotFound,
     MissingKeyId,
@@ -16,6 +17,7 @@ impl std::error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::InvalidHeader => f.write_str("Invalid token header."),
             Self::InvalidToken => f.write_str("Invalid token signature."),
             Self::MissingKeyId => f.write_str("Header not included key id."),
             Self::KeyIdNotFound => f.write_str("Key id that provided by token is not found in decoding keys."),
