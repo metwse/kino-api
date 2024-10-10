@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use super::Server;
 
 impl Server {
-    pub async fn serve(self, host: &str) {
+    pub async fn serve(mut self, host: &str) {
         let uptime = Instant::now();
 
         let app = Router::new()
@@ -23,6 +23,7 @@ impl Server {
                     axum::Json(uptime.elapsed().as_secs())
                 }
             ))
+            .merge(self.routes())
             .layer(ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(|_: BoxError| async move {
                     StatusCode::REQUEST_TIMEOUT.into_response()

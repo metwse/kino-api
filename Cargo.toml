@@ -10,16 +10,18 @@ dotenv = "0.15"
 lazy_static = "1.5"
 jsonwebtoken = "9"
 validator = { version = "0.18", features = ["derive"] }
+paste = "1"
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 tokio = { version = "1", features = ["full"] }
-axum = "0.7"
+axum = { version = "0.7", features = ["macros"] }
 tower = { version = "0.5", features = ["full"] }
 tower-http = { version = "0.5", features = ["full"] }
 
 sqlx = { version = "0.8", features = ["runtime-tokio", "tls-native-tls", "postgres", "macros"] }
+redis = { version = "*", features = ["tokio-comp", "aio"] }
 
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = "0.3"

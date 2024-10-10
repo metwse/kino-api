@@ -26,7 +26,8 @@ async fn main() {
         HOST,
         GOOGLE_CLIENT_ID,
         WN_DATABASE,
-        DATABASE_URL
+        DATABASE_URL,
+        REDIS_URL
     ];
 
     #[cfg(debug_assertions)]
@@ -38,7 +39,8 @@ async fn main() {
         google_audiences: vec![String::from(*GOOGLE_CLIENT_ID)],
         google_allowed_hosted_domains: vec![],
         wn_location: *WN_DATABASE,
-        pg_url: *DATABASE_URL
+        pg_url: *DATABASE_URL,
+        redis_url: *REDIS_URL,
     }.build().await;
 
     server.serve(*HOST).await
