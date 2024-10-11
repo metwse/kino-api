@@ -30,7 +30,7 @@ macro_rules! limit_middleware_fn {
                         return StatusCode::BAD_REQUEST.into_response()
                     };
 
-                let key = format!("ip:{ip}");
+                let key = format!("{}:{ip}", stringify!($fn));
 
                 let redis = limiter_options.database;
                 let rate_limit: i32 = redis::transaction(&mut redis.lock().unwrap(), &[&key[..]], |con, pipe| {
@@ -39,14 +39,9 @@ macro_rules! limit_middleware_fn {
                     // increment limit by one or signal limit exceeded if exists
                     if let Some(limit) = limit {
                         if limit >= limiter_options.num {
-                            if let Some(ttl) = pipe.ttl(key).query::<Option<Vec<i32>>>(con)? {
-                                if ttl.len() > 0 {
-                                    return Ok(Some(ttl[0]))
-                                }
-                            }
-                        } else {
-                            pipe.incr(key, 1).ignore().query::<()>(con)?;
-                        }
+                            return Ok(con.ttl::<_, Option<i32>>(key)?)
+                        } 
+                        con.incr::<_, i32, _>(key, 1)?;
                     } else {
                         pipe
                             .set(key, 1).ignore()
@@ -73,7 +68,7 @@ macro_rules! limit_middleware_fn {
     (@method $fn:ident) => {
         paste::paste! {
             impl Server {
-                pub(crate) fn [<limit_ $fn>](&mut self, router: Router, num: usize, per: Duration) -> Router {
+                pub(crate) fn [<limit_ $fn>](self: &Arc<Self>, router: Router, num: usize, per: Duration) -> Router {
                     let limiter_options = LimitOptions {
                         num, per,
                         database: Arc::clone(&self.redis)
@@ -82,7 +77,7 @@ macro_rules! limit_middleware_fn {
                     router.route_layer(
                         ServiceBuilder::new()
                         .layer(Extension(limiter_options))
-                        .layer(middleware::from_fn(limit_middleware_ip))
+                        .layer(middleware::from_fn([<limit_middleware_ $fn>]))
                     )
                 }
             }
@@ -98,4 +93,4 @@ pub(super) struct LimitOptions {
 }
 
 limit_middleware_fn!(@define ip, "X-Real-IP");
-limit_middleware_fn!(@define token, "Token");
+limit_middleware_fn!(@define user, "UserId");

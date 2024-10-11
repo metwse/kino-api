@@ -9,17 +9,18 @@ use sqlx::{Pool, postgres::{
 }};
 
 use crate::dicts::WordNetDatabase;
-
 use crate::google_signin::GoogleClient;
+use super::jwt::JWTClient;
 
-use redis::Client;
+use redis::Client as RedisClient;
 
 /// Kino api web server struct for shared objects.
 pub struct Server {
     pub(crate) wordnet: Arc<WordNetDatabase>,
     pub(crate) google_client: Arc<GoogleClient>,
     pub(crate) pg: Arc<Pool<Postgres>>,
-    pub(crate) redis: Arc<Mutex<Client>>,
+    pub(crate) redis: Arc<Mutex<RedisClient>>,
+    pub(crate) jwt_client: Arc<JWTClient>,
 }
 
 pub struct ServerBuilder<'a> {
@@ -28,11 +29,12 @@ pub struct ServerBuilder<'a> {
     pub wn_location: &'a str,
     pub pg_url: &'a str,
     pub redis_url: &'a str,
+    pub jwt_secret: &'a str,
 }
 
 impl<'a> ServerBuilder<'a> {
     /// Builds [`Server`] from [`ServerBuilder`]
-    pub async fn build(self) -> Server {
+    pub async fn build(self) -> Arc<Server> {
         let wordnet = Arc::new(WordNetDatabase::new(PathBuf::from(self.wn_location)));
 
         let pg = Arc::new(PgPoolOptions::new()
@@ -41,16 +43,18 @@ impl<'a> ServerBuilder<'a> {
             .await.expect("Cannot connect to Postgres database."));
 
         let redis = redis::Client::open(self.redis_url).expect("Cannot connect to Postgres database.");
+        redis::cmd("FLUSHALL").query::<()>(&mut redis.get_connection().unwrap()).unwrap();
 
         let mut google_client = GoogleClient::new(self.google_audiences, self.google_allowed_hosted_domains);
         google_client.init().await;
 
-        Server {
+        Arc::new(Server {
             wordnet, 
             google_client: Arc::new(google_client),
             pg,
-            redis: Arc::new(Mutex::new(redis))
-        }
+            redis: Arc::new(Mutex::new(redis)),
+            jwt_client: Arc::new(JWTClient::new(self.jwt_secret))
+        })
     }
 }
 

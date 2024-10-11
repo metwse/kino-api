@@ -9,12 +9,15 @@ use axum::{
 use tower::{ServiceBuilder, BoxError};
 use tower_http::trace::TraceLayer;
 
-use std::time::{Duration, Instant};
+use std::{
+    time::{Duration, Instant},
+    sync::Arc
+};
 
 use super::Server;
 
 impl Server {
-    pub async fn serve(mut self, host: &str) {
+    pub async fn serve(self: Arc<Self>, host: &str) {
         let uptime = Instant::now();
 
         let app = Router::new()
@@ -32,7 +35,6 @@ impl Server {
                 .into_inner()
             )
             .layer(TraceLayer::new_for_http());
-
 
         let listener = tokio::net::TcpListener::bind(host)
             .await.expect(&format!("Cannot bind {host}"));

@@ -27,7 +27,8 @@ async fn main() {
         GOOGLE_CLIENT_ID,
         WN_DATABASE,
         DATABASE_URL,
-        REDIS_URL
+        REDIS_URL,
+        JWT_SECRET
     ];
 
     #[cfg(debug_assertions)]
@@ -41,6 +42,7 @@ async fn main() {
         wn_location: *WN_DATABASE,
         pg_url: *DATABASE_URL,
         redis_url: *REDIS_URL,
+        jwt_secret: *JWT_SECRET,
     }.build().await;
 
     server.serve(*HOST).await

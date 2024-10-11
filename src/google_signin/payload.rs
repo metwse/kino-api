@@ -1,7 +1,7 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Google ID Token
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GoogleIdToken {
     // These six fields are incuded in all Google ID tokens.
     /// issuer: Should equal to `accounts.google.com` or `https://accounts.google.com`.
