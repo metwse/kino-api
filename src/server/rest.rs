@@ -17,7 +17,7 @@ use std::{
 use super::Server;
 
 impl Server {
-    pub async fn serve(self: Arc<Self>, host: &str) {
+    pub async fn serve(self: &'static Arc<Self>, host: &str) {
         let uptime = Instant::now();
 
         let app = Router::new()

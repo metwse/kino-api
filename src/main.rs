@@ -44,6 +44,8 @@ async fn main() {
         redis_url: *REDIS_URL,
         jwt_secret: *JWT_SECRET,
     }.build().await;
+    
+    let server = Box::leak(Box::new(server));
 
     server.serve(*HOST).await
 }

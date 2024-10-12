@@ -11,6 +11,7 @@ use sqlx::{Pool, postgres::{
 use crate::dicts::WordNetDatabase;
 use crate::google_signin::GoogleClient;
 use super::jwt::JWTClient;
+use super::snowflake::Snowflake;
 
 use redis::Client as RedisClient;
 
@@ -21,6 +22,7 @@ pub struct Server {
     pub(crate) pg: Arc<Pool<Postgres>>,
     pub(crate) redis: Arc<Mutex<RedisClient>>,
     pub(crate) jwt_client: Arc<JWTClient>,
+    pub(crate) snowflake: Arc<Snowflake>,
 }
 
 pub struct ServerBuilder<'a> {
@@ -53,7 +55,8 @@ impl<'a> ServerBuilder<'a> {
             google_client: Arc::new(google_client),
             pg,
             redis: Arc::new(Mutex::new(redis)),
-            jwt_client: Arc::new(JWTClient::new(self.jwt_secret))
+            jwt_client: Arc::new(JWTClient::new(self.jwt_secret)),
+            snowflake: Snowflake::new()
         })
     }
 }

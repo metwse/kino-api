@@ -6,7 +6,7 @@ where
     T: Serialize
 {
     /// Gets single word from database.
-    fn get(&'a self, query: String) -> Option<T>;
+    fn get(&'a self, query: &String) -> Option<T>;
 
     /// Guesses possible queries form invalid query.
     fn suggest(&'a self, query: &String) -> Vec<&'a String>;

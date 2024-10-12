@@ -132,7 +132,7 @@ impl WordNetDatabase {
 
 impl<'a> Database<'a, Word<'a>> for WordNetDatabase {
     /// Gets word data without copying any &str
-    fn get(self: &'a Self, query: String) -> Option<Word<'a>> {
+    fn get(self: &'a Self, query: &String) -> Option<Word<'a>> {
         let mut data: [Vec<Gloassary>; 4];
         data = [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
         let mut word_exists = false;
@@ -148,7 +148,7 @@ impl<'a> Database<'a, Word<'a>> for WordNetDatabase {
 
         if word_exists {
             Some(Word {
-                lemma: query,
+                lemma: query.clone(),
                 data
             })
         } else { None }
