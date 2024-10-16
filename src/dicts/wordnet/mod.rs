@@ -1,14 +1,6 @@
-use core::str;
-use std::{
-    collections::BTreeMap, 
-    fs,
-    path::PathBuf
-};
-
 mod word;
 
 use word::{Word, Gloassary};
-
 
 use super::{
     database::Database,
@@ -17,6 +9,13 @@ use super::{
         BKTree,
     },
 };
+
+use std::{
+    collections::BTreeMap, 
+    fs,
+    path::PathBuf,
+};
+
 
 /// In-memory WordNet database file.
 pub struct WordNetDatabase {
@@ -86,7 +85,7 @@ impl WordNetDatabase {
         }
     }
 
-    // Low-level api for fetching a part of word data.
+    // Low-level API for fetching a part of word data.
     fn get_by_offset(&self, db: usize, offset: usize) -> Option<Gloassary> {
         // skip first 17 bytes (synset_offset lex_filenum ss_type synset_cnt)
         let lemma_start = offset + 17;

@@ -19,3 +19,6 @@ mod routes;
 
 /// Auth & limit middlewares.
 mod middlewares;
+
+/// Database query structs.
+mod database;

@@ -21,7 +21,7 @@ async fn auth(Extension(server): Extension<Arc<Server>>, mut request: Request, n
             header.to_str().ok()
         } else { None }
     ) else { 
-        return StatusCode::BAD_REQUEST.into_response() 
+        return StatusCode::UNAUTHORIZED.into_response() 
     };
 
     if let Some(kino_token) = server.kino_client.decode(token) {

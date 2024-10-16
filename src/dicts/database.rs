@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+
 /// Database wrapper for dictionarty.
 pub trait Database<'a, T>
 where 

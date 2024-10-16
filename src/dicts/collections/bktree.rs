@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
+
 use levenshtein::levenshtein;
+
 
 /// Levenshtein distance based fuzzy matching tree.
 #[derive(Debug)]

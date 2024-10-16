@@ -1,3 +1,5 @@
+use super::GoogleIdToken;
+
 use std::{
     sync::{Arc, Mutex},
     time::Duration
@@ -8,8 +10,6 @@ use jsonwebtoken::{
     jwk::{AlgorithmParameters, JwkSet}, 
     DecodingKey, Validation
 };
-
-use super::GoogleIdToken;
 
 /// Google ID Token validator. 
 pub struct GoogleClient {

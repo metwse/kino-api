@@ -7,6 +7,7 @@ use serde::{
     }
 };
 
+
 // Serializable word object which can contain four word types.
 pub struct Word<'a> {
     pub lemma: String,

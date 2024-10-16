@@ -2,7 +2,8 @@ use crate::{
     google_signin::GoogleIdToken, 
     api::{
         jwt::{KinoTokenScope, KinoIdToken},
-        snowflake::Snowflake
+        snowflake::Snowflake,
+        database::ORM,
     }
 };
 
@@ -10,10 +11,11 @@ use sqlx::PgPool;
 
 use std::{
     time::{SystemTime, Duration},
-    sync::Arc
+    sync::Arc,
+    borrow::Borrow
 };
 
-pub(super) async fn login_or_signup(token: GoogleIdToken, database: &PgPool, snowflake: &Arc<Snowflake>) -> Option<KinoIdToken> {
+pub(super) async fn login_or_signup(token: GoogleIdToken, database: &Arc<PgPool>, snowflake: &Arc<Snowflake>) -> Option<KinoIdToken> {
     let exp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() + 3600 * 24 * 30;
     let email = token.email.unwrap();
     // check if user already exists
@@ -22,7 +24,7 @@ pub(super) async fn login_or_signup(token: GoogleIdToken, database: &PgPool, sno
             "SELECT id, username, email FROM users WHERE google_id = $1;",
             token.sub
         )
-        .fetch_one(database)
+        .fetch_one(database.borrow())
         .await;
 
     if let Ok(data) = data {
@@ -48,11 +50,13 @@ pub(super) async fn login_or_signup(token: GoogleIdToken, database: &PgPool, sno
                 RETURNING true
             "#,
             id, email, token.sub, token.name, token.picture
-        ).fetch_one(database)
+        ).fetch_one(database.borrow())
         .await else {
             // this block should be unreachable
             return None 
         };
+    let orm = ORM::new(Arc::clone(&database), Arc::clone(&snowflake));
+    orm.default_decks(id).await;
 
     tracing::debug!("User sign up: id={} email={}", id, email);
     Some(KinoIdToken {

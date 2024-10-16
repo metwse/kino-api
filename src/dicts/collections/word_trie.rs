@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+
 /// Trie struct for optimized prefix search queries.
 #[derive(Debug)]
 pub struct WordTrie {
@@ -76,5 +77,4 @@ impl WordTrie {
         }
         false
     }
-
 }
