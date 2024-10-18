@@ -53,11 +53,39 @@ impl ORM {
             .fetch_one(self.db.borrow())
             .await.is_ok()
     }
+
+    pub async fn home(&self, user_id: i64) -> Option<HomeResponse> {
+        let decks = sqlx::query_scalar!(
+            "SELECT array_agg(id) as \"arr!\" FROM decks WHERE owner_id = $1",
+            user_id
+        )
+            .fetch_one(self.db.borrow())
+            .await.ok()?;
+
+        let cards = sqlx::query!(
+            "SELECT id, done_at FROM cards WHERE owner_id = $1",
+            user_id
+        )
+            .fetch_all(self.db.borrow())
+            .await.ok()?;
+
+        let cards = cards.into_iter().map(|row| (row.id, row.done_at)).collect::<Vec<_>>();
+
+        Some(HomeResponse {
+            decks,
+            cards
+        })
+    }
 }
 
+#[derive(Serialize)]
+pub struct HomeResponse {
+    decks: Vec<i64>,
+    cards: Vec<(i64, Option<chrono::NaiveDateTime>)>,
+}
 
 macro_rules! struct_defs {
-    ($($struct:ident),*) => {
+    ($($struct:ident, $limit:expr);*) => {
         paste::paste! {
             impl ORM {
                 //const STRUCT_COUNT: u8 = struct_defs!(@count $($struct,)*);
@@ -81,7 +109,7 @@ macro_rules! struct_defs {
                                     &format!(
                                         "{query}ANY(ARRAY[{}])", 
                                         id
-                                            .iter().take(32)
+                                            .iter().take($limit)
                                             .map(|x| x.to_string())
                                             .collect::<Vec<String>>()
                                             .join(",")
@@ -127,4 +155,9 @@ macro_rules! struct_defs {
     (@innercount $ident:ident) => { 1 }
 }
 
-struct_defs!(Deck, Card, Face, Extension);
+struct_defs!(
+    Deck, 16;
+    Card, 64;
+    Face, 192;
+    Extension, 8
+);

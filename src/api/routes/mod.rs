@@ -143,6 +143,14 @@ impl Server {
                     }
                 }
             };
+            get: "/home", (3, 5), {
+                let orm = orm.clone();
+                |Extension(user): Extension<KinoIdToken>| {
+                    async move {
+                        Json(orm.home(user.sub).await)
+                    }
+                }
+            };
         };
 
         public.merge(auth_required).merge(restricted_data!(Deck, Card, Face, Extension))
