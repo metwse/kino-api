@@ -31,7 +31,7 @@ pub struct Card {
     pub deck_id: i64,
     pub front: i64,
     pub back: Vec<i64>,
-    pub done_at: Option<chrono::NaiveTime>
+    pub done_at: Option<chrono::NaiveDateTime>
 }
 
 

@@ -6,17 +6,18 @@ mod users;
 use super::{
     Server,
     jwt::KinoIdToken,
-    database::{ORM, BulkRequest},
+    database::{ORM, BulkRequest, self},
 };
 
 use std::{
     time::Duration,
-    sync::Arc
+    sync::Arc,
+    borrow::Borrow
 };
 
 use axum::{
     Router, routing,
-    extract::RawQuery,
+    extract::{RawQuery, Path},
     response::IntoResponse,
     Extension,
     http::StatusCode,
@@ -151,6 +152,73 @@ impl Server {
                     }
                 }
             };
+            get: "/cards/:id/done", (5, 1), {
+                let pg = Arc::clone(&self.pg);
+                |Path(id): Path<i64>, Extension(user): Extension<KinoIdToken>| {
+                    async move {
+                        sqlx::query_scalar!(
+                            "UPDATE cards SET done_at = NOW() WHERE id = $1 AND owner_id = $2",
+                            id, user.sub
+                        )
+                            .execute(pg.borrow())
+                            .await
+                            .ok();
+                    }
+                }
+            };
+            get: "/cards/:id/move", (5, 1), {
+                let pg = Arc::clone(&self.pg);
+                |RawQuery(deck_id): RawQuery, Path(id): Path<i64>, Extension(user): Extension<KinoIdToken>| {
+                    async move {
+                        if let Some(deck_id) = deck_id {
+                            if let Ok(deck_id) = deck_id.parse::<i64>() {
+                                sqlx::query_scalar!(
+                                    r#"UPDATE cards 
+                                    SET 
+                                        done_at = NOW(), 
+                                        deck_id = $3 
+                                    WHERE 
+                                        id = $1 AND
+                                        owner_id = $2 AND 
+                                        EXISTS(SELECT 1 FROM decks WHERE id = $3 AND owner_id = $2)"#,
+                                    id, user.sub, deck_id
+                                )
+                                    .execute(pg.borrow())
+                                    .await
+                                    .ok();
+                            }
+                        }
+                    }
+                }
+            };
+            get: "/cards/:id/delete", (5, 1), {
+                let pg = Arc::clone(&self.pg);
+                |Path(id): Path<i64>, Extension(user): Extension<KinoIdToken>| {
+                    async move {
+                        sqlx::query_scalar!(
+                            r#"WITH 
+                                deleted_faces as (DELETE FROM cards WHERE id = $1 RETURNING front || back AS face_id)
+                            DELETE
+                                FROM faces
+                            WHERE
+                                EXISTS(SELECT true FROM deleted_faces WHERE faces.id = ANY(face_id)) AND
+                                faces.owner_id = $2"#,
+                            id, user.sub
+                        )
+                            .execute(pg.borrow())
+                            .await
+                            .ok();
+                    }
+                }
+            };
+            post: "/cards/new", (1, 5), {
+                let orm = orm.clone();
+                |Extension(user): Extension<KinoIdToken>, Json(card_options): Json<database::CreateCard>| {
+                    async move {
+                        Json(orm.create_card(card_options, user.sub).await)
+                    }
+                }
+            }
         };
 
         public.merge(auth_required).merge(restricted_data!(Deck, Card, Face, Extension))

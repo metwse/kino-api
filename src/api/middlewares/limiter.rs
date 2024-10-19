@@ -32,7 +32,7 @@ macro_rules! limit_middleware_fn {
                         return StatusCode::BAD_REQUEST.into_response()
                     };
 
-                let key = format!("{}:{ip}", stringify!($fn));
+                let key = format!("{}:{}:{ip}", stringify!($fn), limiter_options.limiter_id);
 
                 let redis = limiter_options.database;
                 let rate_limit: i32 = redis::transaction(&mut redis.lock().unwrap(), &[&key[..]], |con, pipe| {
@@ -77,7 +77,8 @@ macro_rules! limit_middleware_fn {
                 pub(crate) fn [<limit_ $fn>](self: &Arc<Self>, router: Router, num: usize, per: Duration) -> Router {
                     let limiter_options = LimitOptions {
                         num, per,
-                        database: Arc::clone(&self.redis)
+                        database: Arc::clone(&self.redis),
+                        limiter_id: self.snowflake.gen_id()
                     };
 
                     router.route_layer(
@@ -95,7 +96,8 @@ macro_rules! limit_middleware_fn {
 pub(super) struct LimitOptions {
     num: usize,
     per: Duration,
-    database: Arc<Mutex<RedisClient>>
+    database: Arc<Mutex<RedisClient>>,
+    limiter_id: i64,
 }
 
 limit_middleware_fn!(@define ip, "X-Real-IP");

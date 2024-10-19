@@ -20,6 +20,20 @@ pub struct ORM {
     snowflake: Arc<Snowflake>
 }
 
+#[derive(Deserialize)]
+pub struct CreateCard {
+    pub deck_id: i64,
+    pub front: (i64, Option<String>),
+    pub back: Vec<(i64, Option<String>)>
+}
+
+#[derive(Serialize)]
+pub struct CreateCardResponse {
+    pub card_id: i64,
+    pub front: i64,
+    pub back: Vec<i64>
+}
+
 impl ORM {
     /// Creates new ORM.
     pub fn new(db: Arc<PgPool>, snowflake: Arc<Snowflake>) -> Self {
@@ -54,6 +68,66 @@ impl ORM {
             .await.is_ok()
     }
 
+    /// Creates card.
+    pub async fn create_card(&self, card_options: CreateCard, user_id: i64) -> Option<CreateCardResponse> {
+        sqlx::query_scalar!(
+            "SELECT 1 FROM decks WHERE id = $1 AND owner_id = $2",
+            card_options.deck_id, user_id
+        ).fetch_one(self.db.borrow())
+            .await.ok()?;
+
+        if card_options.back.len() == 0 {
+            return None
+        }
+
+        let front_id = self.snowflake.gen_id();
+
+        let mut query = format!(r#"
+            INSERT INTO faces
+            VALUES
+                ({}, $1, $2, $3),
+        "#, front_id);
+        
+        let mut back_ids = Vec::with_capacity(card_options.back.len());
+
+        for a in 0..card_options.back.len() {
+            let back_id = self.snowflake.gen_id();
+            back_ids.push(back_id);
+            query += &format!("({}, $1, ${}, ${})", back_id, a * 2 + 4, a * 2 + 5)[..];
+            if a != card_options.back.len() - 1 { query += ", " };
+        }
+
+        let mut query = sqlx::query(&query[..])
+            .bind(&user_id)
+            .bind(&card_options.front.0)
+            .bind(&card_options.front.1);
+
+        for back_face in card_options.back {
+            query = query
+                .bind(back_face.0)
+                .bind(back_face.1);
+        }
+
+        query.fetch_optional(self.db.borrow())
+            .await.ok()?;
+
+        let card_id = self.snowflake.gen_id();
+        sqlx::query!(
+            r#"
+                INSERT INTO cards
+                SELECT $1, $2, $3, $4, $5, NULL;
+            "#,
+            card_id, user_id, card_options.deck_id, front_id, &*back_ids
+        ).fetch_optional(self.db.borrow())
+            .await.ok()?;
+        
+        Some(CreateCardResponse {
+            card_id,
+            front: front_id,
+            back: back_ids
+        })
+    }
+
     pub async fn home(&self, user_id: i64) -> Option<HomeResponse> {
         let decks = sqlx::query_scalar!(
             "SELECT array_agg(id) as \"arr!\" FROM decks WHERE owner_id = $1",
@@ -63,13 +137,13 @@ impl ORM {
             .await.ok()?;
 
         let cards = sqlx::query!(
-            "SELECT id, done_at FROM cards WHERE owner_id = $1",
+            "SELECT id, deck_id, done_at FROM cards WHERE owner_id = $1",
             user_id
         )
             .fetch_all(self.db.borrow())
             .await.ok()?;
 
-        let cards = cards.into_iter().map(|row| (row.id, row.done_at)).collect::<Vec<_>>();
+        let cards = cards.into_iter().map(|row| (row.id, row.deck_id, row.done_at)).collect::<Vec<_>>();
 
         Some(HomeResponse {
             decks,
@@ -81,7 +155,7 @@ impl ORM {
 #[derive(Serialize)]
 pub struct HomeResponse {
     decks: Vec<i64>,
-    cards: Vec<(i64, Option<chrono::NaiveDateTime>)>,
+    cards: Vec<(i64, i64, Option<chrono::NaiveDateTime>)>,
 }
 
 macro_rules! struct_defs {
