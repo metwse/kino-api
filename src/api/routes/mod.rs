@@ -135,7 +135,7 @@ impl Server {
             get: "/users", (5, 5), users::user!(Arc::clone(&self.pg));
             get: "/wn/get", (5, 2), wn.0;
             get: "/wn/suggest", (3, 5), wn.1;
-            get: "/wn/suggest_search", (5, 1), wn.2;
+            get: "/wn/suggest_search", (10, 1), wn.2;
             post: "/bulk", (5, 5), {
                 let orm = orm.clone();
                 |Json(bulk_request): Json<BulkRequest>| {
