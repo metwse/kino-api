@@ -38,7 +38,7 @@ impl Server {
             .layer(TraceLayer::new_for_http());
 
         let listener = tokio::net::TcpListener::bind(host)
-            .await.expect(&format!("Cannot bind {host}"));
+            .await.unwrap_or_else(|_| panic!("Cannot bind {host}"));
 
         axum::serve(listener, app).await.unwrap()
     }

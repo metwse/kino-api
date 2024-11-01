@@ -30,7 +30,7 @@ async fn auth(Extension(server): Extension<Arc<Server>>, mut request: Request, n
 
             request
                 .headers_mut()
-                .insert("UserId", HeaderValue::try_from(kino_token.sub).unwrap());
+                .insert("UserId", HeaderValue::from(kino_token.sub));
 
             request
                 .extensions_mut()
@@ -48,6 +48,6 @@ impl Server {
     pub(crate) fn auth(self: &Arc<Self>, router: Router) -> Router {
         router
             .layer(middleware::from_fn(auth))
-            .layer(Extension(Arc::clone(&self)))
+            .layer(Extension(Arc::clone(self)))
     }
 }

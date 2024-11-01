@@ -7,11 +7,11 @@ where
     T: Serialize
 {
     /// Gets single word from database.
-    fn get(&'a self, query: &String) -> Option<T>;
+    fn get(&'a self, query: &str) -> Option<T>;
 
     /// Guesses possible queries form invalid query.
-    fn suggest(&'a self, query: &String) -> Vec<&'a String>;
+    fn suggest(&'a self, query: &str) -> Vec<&'a String>;
 
     /// Suggest words while searching.
-    fn suggest_search(&'a self, query: &String) -> Vec<&'a String>;
+    fn suggest_search(&'a self, query: &str) -> Vec<&'a String>;
 }

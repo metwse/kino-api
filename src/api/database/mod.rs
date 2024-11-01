@@ -15,7 +15,7 @@ use sqlx::PgPool;
 use super::snowflake::Snowflake;
 
 #[derive(Clone)]
-pub struct ORM {
+pub struct Orm {
     db: Arc<PgPool>,
     snowflake: Arc<Snowflake>
 }
@@ -34,8 +34,8 @@ pub struct CreateCardResponse {
     pub back: Vec<i64>
 }
 
-impl ORM {
-    /// Creates new ORM.
+impl Orm {
+    /// Creates new Orm.
     pub fn new(db: Arc<PgPool>, snowflake: Arc<Snowflake>) -> Self {
         Self { 
             db,
@@ -76,7 +76,7 @@ impl ORM {
         ).fetch_one(self.db.borrow())
             .await.ok()?;
 
-        if card_options.back.len() == 0 {
+        if card_options.back.is_empty() {
             return None
         }
 
@@ -98,8 +98,8 @@ impl ORM {
         }
 
         let mut query = sqlx::query(&query[..])
-            .bind(&user_id)
-            .bind(&card_options.front.0)
+            .bind(user_id)
+            .bind(card_options.front.0)
             .bind(&card_options.front.1);
 
         for back_face in card_options.back {
@@ -161,7 +161,7 @@ pub struct HomeResponse {
 macro_rules! struct_defs {
     ($($struct:ident, $limit:expr);*) => {
         paste::paste! {
-            impl ORM {
+            impl Orm {
                 //const STRUCT_COUNT: u8 = struct_defs!(@count $($struct,)*);
 
                 $(
@@ -176,7 +176,7 @@ macro_rules! struct_defs {
                     }
 
                     #[doc="Gets vector of [`" $struct "`]."]
-                    pub async fn [<get_ $struct:lower s>](&self, id: &Vec<i64>) -> Vec<$struct> {
+                    pub async fn [<get_ $struct:lower s>](&self, id: &[i64]) -> Vec<$struct> {
                         let query = concat!("SELECT * FROM ", stringify!($struct), "s WHERE id = ");
                         let data: Vec<$struct> =
                             sqlx::query_as(

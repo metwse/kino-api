@@ -6,7 +6,7 @@ mod users;
 use super::{
     Server,
     jwt::KinoIdToken,
-    database::{ORM, BulkRequest, self},
+    database::{Orm, BulkRequest, self},
 };
 
 use std::{
@@ -27,10 +27,10 @@ use axum::{
 
 impl Server {
     pub(crate) fn routes(self: &'static Arc<Self>) -> Router {
-        let orm = ORM::new(Arc::clone(&self.pg), Arc::clone(&self.snowflake));
+        let orm = Orm::new(Arc::clone(&self.pg), Arc::clone(&self.snowflake));
         
         let public = self.limit_ip(
-            Router::new().route("/signin", routing::get(signin::signin!(Arc::clone(&self)))),
+            Router::new().route("/signin", routing::get(signin::signin!(Arc::clone(self)))),
             5, Duration::from_secs(5)
         );
 

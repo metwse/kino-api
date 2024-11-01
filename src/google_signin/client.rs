@@ -11,12 +11,14 @@ use jsonwebtoken::{
     DecodingKey, Validation
 };
 
+type DecodingKeyList = Arc<Mutex<Option<Vec<(DecodingKey, String)>>>>;
+
 /// Google ID Token validator. 
 pub struct GoogleClient {
     audiences: Vec<String>,
     allowed_hosted_domains: Vec<String>,
     validate_hosted_domains: bool,
-    decoding_keys: Arc<Mutex<Option<Vec<(DecodingKey, String)>>>>
+    decoding_keys: DecodingKeyList
 }
 
 impl GoogleClient {
@@ -119,7 +121,7 @@ impl GoogleClient {
             validation
         };
 
-        let decoded_token = match decode::<GoogleIdToken>(token, &decoding_key, &validation) {
+        let decoded_token = match decode::<GoogleIdToken>(token, decoding_key, &validation) {
             Ok(decoded_token) => {
                 let decoded_token = decoded_token.claims;
                 if let Some(ref hosted_domain) = decoded_token.hd {

@@ -34,7 +34,7 @@ impl KinoClient {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.validate_exp = true;
 
-        if let Some(token) = decode::<KinoIdToken>(&payload, &self.decoding_key, &validation).ok() {
+        if let Ok(token) = decode::<KinoIdToken>(payload, &self.decoding_key, &validation) {
             Some(token.claims)
         } else {
             None

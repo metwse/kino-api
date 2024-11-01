@@ -41,9 +41,10 @@ macro_rules! limit_middleware_fn {
                     // increment limit by one or signal limit exceeded if exists
                     if let Some(limit) = limit {
                         if limit >= limiter_options.num {
-                            return Ok(con.ttl::<_, Option<i32>>(key)?)
+                            let ttl = con.ttl::<_, Option<i32>>(key)?;
+                            return Ok(ttl)
                         } 
-                        con.incr::<_, i32, _>(key, 1)?;
+                        con.incr::<_, i32, String>(key, 1)?;
                     } else {
                         pipe
                             .set(key, 1).ignore()

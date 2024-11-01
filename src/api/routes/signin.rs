@@ -3,7 +3,7 @@ use crate::{
     api::{
         jwt::{KinoTokenScope, KinoIdToken},
         snowflake::Snowflake,
-        database::ORM,
+        database::Orm,
     }
 };
 
@@ -55,7 +55,7 @@ pub(super) async fn login_or_signup(token: GoogleIdToken, database: &Arc<PgPool>
             // this block should be unreachable
             return None 
         };
-    let orm = ORM::new(Arc::clone(&database), Arc::clone(&snowflake));
+    let orm = Orm::new(Arc::clone(database), Arc::clone(snowflake));
     orm.default_decks(id).await;
 
     tracing::debug!("User sign up: id={} email={}", id, email);

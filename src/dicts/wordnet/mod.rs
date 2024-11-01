@@ -47,7 +47,7 @@ impl WordNetDatabase {
                 if file_type == "index" {
                     let mut btree = BTreeMap::new();
 
-                    for line in data.lines().into_iter().skip(29) { // skip first 29 license lines
+                    for line in data.lines().skip(29) { // skip first 29 license lines
                         // index files might end with 2 to 4 spaces. because of that trim()
                         // required
                         let line = line.trim().split(" ").collect::<Vec<_>>();
@@ -91,9 +91,10 @@ impl WordNetDatabase {
         let lemma_start = offset + 17;
         let mut lemma_end = lemma_start;
         let bytes = self.database[db].as_bytes();
+        let base16_char_to_num = |c: u8| if c < 58 { c - 48 } else { c - 87 };
         let synset_cnt_2 = {
-            (bytes[offset + 14] - 48) * 10 +
-            bytes[offset + 15] - 48
+            base16_char_to_num(bytes[offset + 14]) * 16 +
+            base16_char_to_num(bytes[offset + 15])
         } * 2; // for each lemma, two spaces must be skipped
 
         let mut collected_lemmas = 0;
@@ -101,6 +102,7 @@ impl WordNetDatabase {
             if bytes[lemma_end] == b' ' { collected_lemmas += 1; }
             lemma_end += 1
         }
+        
 
         let mut glossary_start = lemma_end;
         while bytes[glossary_start - 1] != b'|' { glossary_start += 1 }
@@ -131,33 +133,33 @@ impl WordNetDatabase {
 
 impl<'a> Database<'a, Word<'a>> for WordNetDatabase {
     /// Gets word data without copying any &str
-    fn get(self: &'a Self, query: &String) -> Option<Word<'a>> {
+    fn get(&'a self, query: &str) -> Option<Word<'a>> {
         let mut data: [Vec<Gloassary>; 4];
         data = [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
         let mut word_exists = false;
-        for i in 0..4 {
-            if let Some(offsets) = self.index[i].get(&query[..]) {
+        for (i, data) in data.iter_mut().enumerate() {
+            if let Some(offsets) = self.index[i].get(query) {
                 word_exists = true;
-                data[i] = Vec::with_capacity(offsets.len());
+                *data = Vec::with_capacity(offsets.len());
                 for &offset in offsets {
-                    data[i].push(self.get_by_offset(i, offset)?)
+                    data.push(self.get_by_offset(i, offset)?)
                 }
             }
         }
 
         if word_exists {
             Some(Word {
-                lemma: query.clone(),
+                lemma: query.to_string(),
                 data
             })
         } else { None }
     }
 
-    fn suggest(&'a self, query: &String) -> Vec<&'a String> {
+    fn suggest(&'a self, query: &str) -> Vec<&'a String> {
         self.bktree.find(query, 8)
     }
 
-    fn suggest_search(&'a self, query: &String) -> Vec<&'a String> {
+    fn suggest_search(&'a self, query: &str) -> Vec<&'a String> {
         self.word_trie.prefix_search(query, 8)
     }
 }
