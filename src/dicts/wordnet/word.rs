@@ -122,7 +122,7 @@ impl Serialize for Examples<'_> {
                 )?;
                 last_start = i;
             }
-            if i == bytes.len() - 1 { 
+            if i == bytes.len() - 1 && last_start + 3 < i { 
                 seq.serialize_element(
                     std::str::from_utf8(&bytes[(last_start + 3)..i]).unwrap()
                 )?;
