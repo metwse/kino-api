@@ -32,6 +32,8 @@ PostgreSQL database has to be connected during build.
 cargo build
 ```
 
+Use `--network=host` during Docker build.
+
 ## Run
 API should run if setup above applied correctly.
 ```sh
