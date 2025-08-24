@@ -18,6 +18,5 @@ FROM alpine:latest
 RUN apk add --no-cache cargo openssl
 
 COPY --from=builder /app/target/release/kino-api kino-api
-COPY .env .
 
 CMD ./kino-api
