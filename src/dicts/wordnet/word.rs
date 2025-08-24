@@ -1,12 +1,7 @@
 use serde::{
+    ser::{SerializeMap, SerializeSeq, Serializer},
     Serialize,
-    ser::{
-        Serializer,
-        SerializeMap,
-        SerializeSeq
-    }
 };
-
 
 // Serializable word object which can contain four word types.
 pub struct Word<'a> {
@@ -16,7 +11,7 @@ pub struct Word<'a> {
 
 // Single-type word glossary.
 pub struct Gloassary<'a> {
-    synonyms: Synonyms<'a>, 
+    synonyms: Synonyms<'a>,
     meanings: &'a str,
     examples: Examples<'a>,
 }
@@ -38,7 +33,8 @@ impl<'a> Gloassary<'a> {
 impl Serialize for Word<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer {
+        S: Serializer,
+    {
         let mut map = serializer.serialize_map(Some(5))?;
 
         map.serialize_key("lemma")?;
@@ -57,7 +53,8 @@ impl Serialize for Word<'_> {
 impl Serialize for Gloassary<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer {
+        S: Serializer,
+    {
         let mut map = serializer.serialize_map(Some(3))?;
 
         map.serialize_key("meanings")?;
@@ -74,11 +71,14 @@ impl Serialize for Gloassary<'_> {
 impl Serialize for Synonyms<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer {
+        S: Serializer,
+    {
         let mut space_count = 1;
         let bytes = self.0.as_bytes();
         for &byte in bytes {
-            if byte == b' ' { space_count += 1 }
+            if byte == b' ' {
+                space_count += 1
+            }
         }
         space_count >>= 1;
 
@@ -87,13 +87,11 @@ impl Serialize for Synonyms<'_> {
         let mut word_start = 0;
         let mut skip = false;
         for (i, &byte) in bytes.iter().enumerate() {
-            if byte == b' ' { 
+            if byte == b' ' {
                 if !skip {
-                    seq.serialize_element(
-                        std::str::from_utf8(&bytes[word_start..i]).unwrap()
-                    )?;
+                    seq.serialize_element(std::str::from_utf8(&bytes[word_start..i]).unwrap())?;
                 }
-                skip = !skip; 
+                skip = !skip;
                 word_start = i + 1;
             }
         }
@@ -105,27 +103,27 @@ impl Serialize for Synonyms<'_> {
 impl Serialize for Examples<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer {
+        S: Serializer,
+    {
         let mut len = 1;
         let bytes = self.0.as_bytes();
         for &byte in bytes {
-            if byte == b';' { len += 1 }
+            if byte == b';' {
+                len += 1
+            }
         }
         let mut seq = serializer.serialize_seq(Some(len))?;
-
 
         let mut last_start = 0;
         for (i, &byte) in bytes.iter().enumerate().skip(2) {
             if byte == b';' {
                 seq.serialize_element(
-                    std::str::from_utf8(&bytes[(last_start + 3)..(i - 1)]).unwrap()
+                    std::str::from_utf8(&bytes[(last_start + 3)..(i - 1)]).unwrap(),
                 )?;
                 last_start = i;
             }
-            if i == bytes.len() - 1 && last_start + 3 < i { 
-                seq.serialize_element(
-                    std::str::from_utf8(&bytes[(last_start + 3)..i]).unwrap()
-                )?;
+            if i == bytes.len() - 1 && last_start + 3 < i {
+                seq.serialize_element(std::str::from_utf8(&bytes[(last_start + 3)..i]).unwrap())?;
             }
         }
 

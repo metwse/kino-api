@@ -1,5 +1,5 @@
-mod word_trie;
 mod bktree;
+mod word_trie;
 
-pub use word_trie::WordTrie;
 pub use bktree::BKTree;
+pub use word_trie::WordTrie;

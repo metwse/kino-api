@@ -5,21 +5,17 @@ use axum::{
     http::{HeaderValue, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    Extension, Router
+    Extension, Router,
 };
 
-use redis::{
-    Commands,
-    Client as RedisClient
-};
+use redis::{Client as RedisClient, Commands};
 
 use std::{
     sync::{Arc, Mutex},
-    time::Duration
+    time::Duration,
 };
 
 use tower::ServiceBuilder;
-
 
 macro_rules! limit_middleware_fn {
     (@define $fn:ident, $header:expr) => {
@@ -43,7 +39,7 @@ macro_rules! limit_middleware_fn {
                         if limit >= limiter_options.num {
                             let ttl = con.ttl::<_, Option<i32>>(key)?;
                             return Ok(ttl)
-                        } 
+                        }
                         con.incr::<_, i32, String>(key, 1)?;
                     } else {
                         pipe

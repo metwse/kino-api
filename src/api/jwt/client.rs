@@ -1,15 +1,9 @@
-use jsonwebtoken::{
-    EncodingKey, DecodingKey,
-    Header, Algorithm,
-    Validation,
-    encode, decode,
-};
-
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
 /// Kino JWT manager for creating and validating JWT's.
 pub struct KinoClient {
     encoding_key: EncodingKey,
-    decoding_key: DecodingKey
+    decoding_key: DecodingKey,
 }
 
 pub use super::KinoIdToken;

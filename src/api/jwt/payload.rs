@@ -1,5 +1,4 @@
-use serde::{Serialize, Deserialize};
-
+use serde::{Deserialize, Serialize};
 
 /// Kino JWT claims.
 #[derive(Debug, Serialize, Deserialize, Clone)]

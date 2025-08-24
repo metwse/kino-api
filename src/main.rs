@@ -4,7 +4,6 @@ use lazy_static::lazy_static;
 
 use dotenv::dotenv;
 
-
 // loads environment variables to &'static str
 macro_rules! env {
     ($($name: ident),*) => {
@@ -19,7 +18,6 @@ macro_rules! env {
         }
     };
 }
-
 
 #[tokio::main]
 async fn main() {
@@ -45,8 +43,10 @@ async fn main() {
         pg_url: *DATABASE_URL,
         redis_url: *REDIS_URL,
         jwt_secret: *JWT_SECRET,
-    }.build().await;
-    
+    }
+    .build()
+    .await;
+
     let server = Box::leak(Box::new(server));
 
     server.serve(*HOST).await

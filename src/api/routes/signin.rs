@@ -1,31 +1,38 @@
 use crate::{
-    google_signin::GoogleIdToken, 
     api::{
-        jwt::{KinoTokenScope, KinoIdToken},
-        snowflake::Snowflake,
         database::Orm,
-    }
+        jwt::{KinoIdToken, KinoTokenScope},
+        snowflake::Snowflake,
+    },
+    google_signin::GoogleIdToken,
 };
 
 use sqlx::PgPool;
 
 use std::{
-    time::{SystemTime, Duration},
+    borrow::Borrow,
     sync::Arc,
-    borrow::Borrow
+    time::{Duration, SystemTime},
 };
 
-pub(super) async fn login_or_signup(token: GoogleIdToken, database: &Arc<PgPool>, snowflake: &Arc<Snowflake>) -> Option<KinoIdToken> {
-    let exp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() + 3600 * 24 * 30;
+pub(super) async fn login_or_signup(
+    token: GoogleIdToken,
+    database: &Arc<PgPool>,
+    snowflake: &Arc<Snowflake>,
+) -> Option<KinoIdToken> {
+    let exp = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or(Duration::from_secs(0))
+        .as_secs()
+        + 3600 * 24 * 30;
     let email = token.email.unwrap();
     // check if user already exists
-    let data = 
-        sqlx::query!(
-            "SELECT id, username, email FROM users WHERE google_id = $1;",
-            token.sub
-        )
-        .fetch_one(database.borrow())
-        .await;
+    let data = sqlx::query!(
+        "SELECT id, username, email FROM users WHERE google_id = $1;",
+        token.sub
+    )
+    .fetch_one(database.borrow())
+    .await;
 
     if let Ok(data) = data {
         tracing::debug!("User log in: id={} email={}", data.id, data.email);
@@ -35,15 +42,15 @@ pub(super) async fn login_or_signup(token: GoogleIdToken, database: &Arc<PgPool>
             google_id: token.sub,
             email: data.email,
             username: data.username,
-            exp 
-        })
+            exp,
+        });
     }
 
     let id = snowflake.gen_id();
-    let Ok(_) = 
+    let Ok(_) =
         sqlx::query_scalar!(
-            r#" 
-            INSERT INTO users SELECT $1, $2, $3, NULL, $4, $5 WHERE 
+            r#"
+            INSERT INTO users SELECT $1, $2, $3, NULL, $4, $5 WHERE
                 NOT EXISTS (SELECT 1 FROM users WHERE id = $1) AND
                 NOT EXISTS (SELECT 1 FROM users WHERE email = CAST($2 AS character varying(254))) AND
                 NOT EXISTS (SELECT 1 FROM users WHERE google_id = CAST($3 AS text))
@@ -53,7 +60,7 @@ pub(super) async fn login_or_signup(token: GoogleIdToken, database: &Arc<PgPool>
         ).fetch_one(database.borrow())
         .await else {
             // this block should be unreachable
-            return None 
+            return None
         };
     let orm = Orm::new(Arc::clone(database), Arc::clone(snowflake));
     orm.default_decks(id).await;
@@ -65,48 +72,40 @@ pub(super) async fn login_or_signup(token: GoogleIdToken, database: &Arc<PgPool>
         google_id: token.sub,
         email,
         username: None,
-        exp
+        exp,
     })
 }
 
-
 macro_rules! signin {
-    ($server:expr) => {
-{
-    let google_client = Arc::clone(&$server.google_client);
-    let pg = Arc::clone(&$server.pg);
-    let snowflake = Arc::clone(&$server.snowflake);
+    ($server:expr) => {{
+        let google_client = Arc::clone(&$server.google_client);
+        let pg = Arc::clone(&$server.pg);
+        let snowflake = Arc::clone(&$server.snowflake);
 
-    let kino_client = Arc::clone(&$server.kino_client);
+        let kino_client = Arc::clone(&$server.kino_client);
 
-    use axum::{
-        extract::RawQuery,
-        response::IntoResponse,
-        http::StatusCode,
-        Json
-    };
+        use axum::{extract::RawQuery, http::StatusCode, response::IntoResponse, Json};
 
-    |RawQuery(token): RawQuery| async move { 
-        let Some(token) = token else {
-            return StatusCode::BAD_REQUEST.into_response()
-        };
+        |RawQuery(token): RawQuery| async move {
+            let Some(token) = token else {
+                return StatusCode::BAD_REQUEST.into_response();
+            };
 
-        if let Ok(token) = google_client.validate(&token) {
-            if let Some(email_verified) = token.email_verified {
-                if email_verified && token.email.is_some() {
-                    if let Some(kino_token) = signin::login_or_signup(token, &pg, &snowflake).await {
-                        return Json(
-                            kino_client.encode(kino_token),
-                        ).into_response();
+            if let Ok(token) = google_client.validate(&token) {
+                if let Some(email_verified) = token.email_verified {
+                    if email_verified && token.email.is_some() {
+                        if let Some(kino_token) =
+                            signin::login_or_signup(token, &pg, &snowflake).await
+                        {
+                            return Json(kino_client.encode(kino_token)).into_response();
+                        }
                     }
                 }
             }
-        }
 
-        StatusCode::UNAUTHORIZED.into_response()
-    }
-}
-};
+            StatusCode::UNAUTHORIZED.into_response()
+        }
+    }};
 }
 
 pub(crate) use signin;

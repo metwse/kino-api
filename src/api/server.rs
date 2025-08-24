@@ -1,25 +1,18 @@
-use crate::{
-    dicts::WordNetDatabase,
-    google_signin::GoogleClient,
-};
+use crate::{dicts::WordNetDatabase, google_signin::GoogleClient};
 
-use super::{
-    jwt::KinoClient,
-    snowflake::Snowflake,
-};
+use super::{jwt::KinoClient, snowflake::Snowflake};
 
 use std::{
     path::PathBuf,
-    sync::{Arc, Mutex}
+    sync::{Arc, Mutex},
 };
 
-use sqlx::{Pool, postgres::{
-    PgPoolOptions,
-    Postgres
-}};
+use sqlx::{
+    postgres::{PgPoolOptions, Postgres},
+    Pool,
+};
 
 use redis::Client as RedisClient;
-
 
 /// Kino api web server struct for shared objects.
 pub struct Server {
@@ -46,25 +39,31 @@ impl<'a> ServerBuilder<'a> {
     pub async fn build(self) -> Arc<Server> {
         let wordnet = Arc::new(WordNetDatabase::new(PathBuf::from(self.wn_location)));
 
-        let pg = Arc::new(PgPoolOptions::new()
-            .max_connections(8)
-            .connect(self.pg_url)
-            .await.expect("Cannot connect to Postgres database."));
+        let pg = Arc::new(
+            PgPoolOptions::new()
+                .max_connections(8)
+                .connect(self.pg_url)
+                .await
+                .expect("Cannot connect to Postgres database."),
+        );
 
-        let redis = redis::Client::open(self.redis_url).expect("Cannot connect to Postgres database.");
-        redis::cmd("FLUSHALL").query::<()>(&mut redis.get_connection().unwrap()).unwrap();
+        let redis =
+            redis::Client::open(self.redis_url).expect("Cannot connect to Postgres database.");
+        redis::cmd("FLUSHALL")
+            .query::<()>(&mut redis.get_connection().unwrap())
+            .unwrap();
 
-        let mut google_client = GoogleClient::new(self.google_audiences, self.google_allowed_hosted_domains);
+        let mut google_client =
+            GoogleClient::new(self.google_audiences, self.google_allowed_hosted_domains);
         google_client.init().await;
 
         Arc::new(Server {
-            wordnet, 
+            wordnet,
             google_client: Arc::new(google_client),
             pg,
             redis: Arc::new(Mutex::new(redis)),
             kino_client: Arc::new(KinoClient::new(self.jwt_secret)),
-            snowflake: Snowflake::new()
+            snowflake: Snowflake::new(),
         })
     }
 }
-

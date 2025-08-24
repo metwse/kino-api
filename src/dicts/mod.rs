@@ -1,5 +1,5 @@
-mod wordnet;
 mod database;
+mod wordnet;
 
 /// Common collections to query optimized text searches.
 pub mod collections;

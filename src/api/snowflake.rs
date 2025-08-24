@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use chrono::{Utc, TimeZone};
-
+use chrono::{TimeZone, Utc};
 
 /// Unique id generator.
 pub struct Snowflake {
@@ -13,13 +12,10 @@ lazy_static::lazy_static! {
     static ref EPOCH: i64 = Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap().timestamp_millis();
 }
 
-
 impl Snowflake {
     /// Creates a [`Snowflake`].
     pub fn new() -> Arc<Self> {
-        Arc::new(Snowflake { 
-            seq: Mutex::new(0) 
-        })
+        Arc::new(Snowflake { seq: Mutex::new(0) })
     }
 
     /// Generates unique ids.
@@ -33,7 +29,9 @@ impl Snowflake {
         let snowflake = (time_since_epoch << 22) | *seq;
 
         *seq += 1;
-        if *seq > MAX_SEQ { *seq = 0 }
+        if *seq > MAX_SEQ {
+            *seq = 0
+        }
 
         snowflake
     }

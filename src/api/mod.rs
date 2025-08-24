@@ -1,9 +1,6 @@
 /// Structs for building and running a server.
 mod server;
-pub use server::{
-    Server,
-    ServerBuilder
-};
+pub use server::{Server, ServerBuilder};
 
 /// Twitter's snowflake algorithm to generate unique ids.
 mod snowflake;

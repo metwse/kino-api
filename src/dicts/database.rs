@@ -1,10 +1,9 @@
 use serde::Serialize;
 
-
 /// Database wrapper for dictionarty.
 pub trait Database<'a, T>
-where 
-    T: Serialize
+where
+    T: Serialize,
 {
     /// Gets single word from database.
     fn get(&'a self, query: &str) -> Option<T>;

@@ -3,12 +3,9 @@ pub mod structs;
 #[allow(unused_imports)]
 pub use structs::*;
 
-use std::{ 
-    borrow::Borrow, 
-    sync::Arc,
-};
+use std::{borrow::Borrow, sync::Arc};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use sqlx::PgPool;
 
@@ -17,30 +14,27 @@ use super::snowflake::Snowflake;
 #[derive(Clone)]
 pub struct Orm {
     db: Arc<PgPool>,
-    snowflake: Arc<Snowflake>
+    snowflake: Arc<Snowflake>,
 }
 
 #[derive(Deserialize)]
 pub struct CreateCard {
     pub deck_id: i64,
     pub front: (i64, Option<String>),
-    pub back: Vec<(i64, Option<String>)>
+    pub back: Vec<(i64, Option<String>)>,
 }
 
 #[derive(Serialize)]
 pub struct CreateCardResponse {
     pub card_id: i64,
     pub front: i64,
-    pub back: Vec<i64>
+    pub back: Vec<i64>,
 }
 
 impl Orm {
     /// Creates new Orm.
     pub fn new(db: Arc<PgPool>, snowflake: Arc<Snowflake>) -> Self {
-        Self { 
-            db,
-            snowflake
-        }
+        Self { db, snowflake }
     }
 
     /// Assigns default decks to user.
@@ -64,37 +58,50 @@ impl Orm {
             self.snowflake.gen_id(),
             self.snowflake.gen_id(),
         )
-            .fetch_one(self.db.borrow())
-            .await.is_ok()
+        .fetch_one(self.db.borrow())
+        .await
+        .is_ok()
     }
 
     /// Creates card.
-    pub async fn create_card(&self, card_options: CreateCard, user_id: i64) -> Option<CreateCardResponse> {
+    pub async fn create_card(
+        &self,
+        card_options: CreateCard,
+        user_id: i64,
+    ) -> Option<CreateCardResponse> {
         sqlx::query_scalar!(
             "SELECT 1 FROM decks WHERE id = $1 AND owner_id = $2",
-            card_options.deck_id, user_id
-        ).fetch_one(self.db.borrow())
-            .await.ok()?;
+            card_options.deck_id,
+            user_id
+        )
+        .fetch_one(self.db.borrow())
+        .await
+        .ok()?;
 
         if card_options.back.is_empty() {
-            return None
+            return None;
         }
 
         let front_id = self.snowflake.gen_id();
 
-        let mut query = format!(r#"
+        let mut query = format!(
+            r#"
             INSERT INTO faces
             VALUES
                 ({}, $1, $2, $3),
-        "#, front_id);
-        
+        "#,
+            front_id
+        );
+
         let mut back_ids = Vec::with_capacity(card_options.back.len());
 
         for a in 0..card_options.back.len() {
             let back_id = self.snowflake.gen_id();
             back_ids.push(back_id);
             query += &format!("({}, $1, ${}, ${})", back_id, a * 2 + 4, a * 2 + 5)[..];
-            if a != card_options.back.len() - 1 { query += ", " };
+            if a != card_options.back.len() - 1 {
+                query += ", "
+            };
         }
 
         let mut query = sqlx::query(&query[..])
@@ -103,13 +110,10 @@ impl Orm {
             .bind(&card_options.front.1);
 
         for back_face in card_options.back {
-            query = query
-                .bind(back_face.0)
-                .bind(back_face.1);
+            query = query.bind(back_face.0).bind(back_face.1);
         }
 
-        query.fetch_optional(self.db.borrow())
-            .await.ok()?;
+        query.fetch_optional(self.db.borrow()).await.ok()?;
 
         let card_id = self.snowflake.gen_id();
         sqlx::query!(
@@ -117,14 +121,20 @@ impl Orm {
                 INSERT INTO cards
                 SELECT $1, $2, $3, $4, $5, NULL;
             "#,
-            card_id, user_id, card_options.deck_id, front_id, &*back_ids
-        ).fetch_optional(self.db.borrow())
-            .await.ok()?;
-        
+            card_id,
+            user_id,
+            card_options.deck_id,
+            front_id,
+            &*back_ids
+        )
+        .fetch_optional(self.db.borrow())
+        .await
+        .ok()?;
+
         Some(CreateCardResponse {
             card_id,
             front: front_id,
-            back: back_ids
+            back: back_ids,
         })
     }
 
@@ -133,22 +143,24 @@ impl Orm {
             "SELECT array_agg(id) as \"arr!\" FROM decks WHERE owner_id = $1",
             user_id
         )
-            .fetch_one(self.db.borrow())
-            .await.ok()?;
+        .fetch_one(self.db.borrow())
+        .await
+        .ok()?;
 
         let cards = sqlx::query!(
             "SELECT id, deck_id, done_at FROM cards WHERE owner_id = $1",
             user_id
         )
-            .fetch_all(self.db.borrow())
-            .await.ok()?;
+        .fetch_all(self.db.borrow())
+        .await
+        .ok()?;
 
-        let cards = cards.into_iter().map(|row| (row.id, row.deck_id, row.done_at)).collect::<Vec<_>>();
+        let cards = cards
+            .into_iter()
+            .map(|row| (row.id, row.deck_id, row.done_at))
+            .collect::<Vec<_>>();
 
-        Some(HomeResponse {
-            decks,
-            cards
-        })
+        Some(HomeResponse { decks, cards })
     }
 }
 
@@ -168,7 +180,7 @@ macro_rules! struct_defs {
                     #[doc="Gets [`" $struct "`]."]
                     pub async fn [<get_ $struct:lower>](&self, id: i64) -> Option<$struct> {
                         let query = concat!("SELECT * FROM ", stringify!($struct), "s WHERE id = ");
-                        let data: Option<$struct> = 
+                        let data: Option<$struct> =
                             sqlx::query_as(&format!("{query}{id}")[..])
                                 .fetch_one(self.db.borrow())
                                 .await.ok();
@@ -181,7 +193,7 @@ macro_rules! struct_defs {
                         let data: Vec<$struct> =
                             sqlx::query_as(
                                     &format!(
-                                        "{query}ANY(ARRAY[{}])", 
+                                        "{query}ANY(ARRAY[{}])",
                                         id
                                             .iter().take($limit)
                                             .map(|x| x.to_string())
@@ -198,7 +210,7 @@ macro_rules! struct_defs {
                 #[doc="Gets whatever object in a single query."]
                 pub async fn get(&self, request: BulkRequest) -> BulkResponse {
                     $(
-                        let [<$struct:lower s>] = 
+                        let [<$struct:lower s>] =
                             if let Some(ids) = &request.[<$struct:lower s>] {
                                 self.[<get_ $struct:lower s>](ids).await
                             } else { vec![] };

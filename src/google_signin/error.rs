@@ -20,8 +20,12 @@ impl fmt::Display for Error {
             Self::InvalidHeader => f.write_str("Invalid token header."),
             Self::InvalidToken => f.write_str("Invalid token signature."),
             Self::MissingKeyId => f.write_str("Header not included key id."),
-            Self::KeyIdNotFound => f.write_str("Key id that provided by token is not found in decoding keys."),
-            Self::InvalidHostedDomain => f.write_str("User is not on a permitted restricted domainuser is on permitted hosted domain."),
+            Self::KeyIdNotFound => {
+                f.write_str("Key id that provided by token is not found in decoding keys.")
+            }
+            Self::InvalidHostedDomain => f.write_str(
+                "User is not on a permitted restricted domainuser is on permitted hosted domain.",
+            ),
             Self::ClientNotInitialized => f.write_str("Decoding keys not initialized."),
             Self::ValidationError(validation_error) => validation_error.fmt(f),
         }

@@ -7,7 +7,7 @@ pub struct GoogleIdToken {
     /// issuer: Should equal to `accounts.google.com` or `https://accounts.google.com`.
     pub iss: String,
     /// subject: Unique account id.
-    pub sub: String, 
+    pub sub: String,
     /// audience: Should equal to one of your app's client IDs
     pub aud: String,
     /// issued at: Unix timestamp when issued.
@@ -18,7 +18,6 @@ pub struct GoogleIdToken {
     /// hosted domain: Represents a Google Workspace or Cloud organization account.
     pub hd: Option<String>,
 
-    
     // These seven fields are only included when the user has granted the "profile" and
     // "email" OAuth scopes to the application.
     pub email: Option<String>,

@@ -2,11 +2,10 @@ use std::collections::BTreeMap;
 
 use levenshtein::levenshtein;
 
-
 /// Levenshtein distance based fuzzy matching tree.
 #[derive(Debug, Default)]
 pub struct BKTree {
-    root: Option<BKTreeNode>
+    root: Option<BKTreeNode>,
 }
 
 #[derive(Debug)]
@@ -34,7 +33,9 @@ impl BKTree {
     pub fn find<'a>(&'a self, word: &str, limit: usize) -> Vec<&'a String> {
         if let Some(root) = &self.root {
             root.find(word, limit)
-        } else { vec![] }
+        } else {
+            vec![]
+        }
     }
 }
 
@@ -75,13 +76,21 @@ impl BKTreeNode {
 
     // directly inserts BKTreeNode to child BTreeMap
     fn insert_unchecked(&mut self, word: String, distance: usize) {
-        self.children.entry(distance).or_default().push(BKTreeNode::new(word));
+        self.children
+            .entry(distance)
+            .or_default()
+            .push(BKTreeNode::new(word));
     }
 
     // finds closest words up to limit. optimized by not using recursive functions
     fn find(&self, word: &str, limit: usize) -> Vec<&String> {
         // one of 3 letters might be corrected
-        let error_count = word.len() / 3 + (if ((word.len() & 1) + (word.len() & 2)) > 0 { 1 } else { 0 }); 
+        let error_count = word.len() / 3
+            + (if ((word.len() & 1) + (word.len() & 2)) > 0 {
+                1
+            } else {
+                0
+            });
 
         let candidates_len = error_count << 12;
         let mut candidates = Vec::with_capacity(candidates_len);
@@ -90,7 +99,9 @@ impl BKTreeNode {
 
         // nth element of results has n+1 distance
         let mut results = Vec::with_capacity(error_count);
-        for _ in 0..error_count { results.push(Vec::new()) }
+        for _ in 0..error_count {
+            results.push(Vec::new())
+        }
 
         let mut total_result = 0;
         let mut tested = 1; // total numbers of levenshtein tests
@@ -117,15 +128,16 @@ impl BKTreeNode {
                                 if match results[0].len() {
                                     0 => (candidates_len << 2) + candidates_len,
                                     1 => candidates_len << 2,
-                                    _ => candidates_len 
-                                } < tested || total_result == limit {
-                                    break 'outer
+                                    _ => candidates_len,
+                                } < tested
+                                    || total_result == limit
+                                {
+                                    break 'outer;
                                 }
                             }
                         }
                     }
                 }
-
             }
         }
 
