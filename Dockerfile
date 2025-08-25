@@ -1,22 +1,17 @@
-FROM alpine:latest AS builder
+FROM alpine:latest
 
-ARG DATABASE_URL="postgres://kino:kino@localhost/kino"
-
-RUN apk add --no-cache cargo pkgconf openssl openssl-dev
+RUN apk add --no-cache cargo pkgconf openssl openssl-dev tar wget
 
 RUN mkdir -p /app
 WORKDIR /app
 
+RUN wget https://wordnetcode.princeton.edu/3.0/WNdb-3.0.tar.gz
+RUN tar -xvzf WNdb-3.0.tar.gz
+RUN mv dict wn
+RUN rm WNdb-3.0.tar.gz
+
 COPY src src
 COPY Cargo.toml .
+COPY .env .
 
-ENV DATABASE_URL=${DATABASE_URL}
-RUN cargo build --release
-
-FROM alpine:latest
-
-RUN apk add --no-cache cargo openssl
-
-COPY --from=builder /app/target/release/kino-api kino-api
-
-CMD ./kino-api
+CMD cargo run --release

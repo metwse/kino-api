@@ -1,0 +1,30 @@
+services:
+  backend:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    links:
+      - "postgres:postgres"
+      - "redis:redis"
+    ports:
+      - 8081:8081
+
+  postgres:
+    image: postgres:15
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: kino
+      POSTGRES_PASSWORD: kino
+      POSTGRES_DB: kino
+    volumes:
+      - ./database.sql:/docker-entrypoint-initdb.d/database.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kino -d kino"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
